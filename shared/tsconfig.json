@@ -4,6 +4,8 @@
     "jsx": "react",
     "sourceRoot": "src",
     "typeRoots": ["src/types", "../node_modules/@types"],
+    "rootDir": ".",
+    "outDir": "out",
   },
   "include": ["**/*"],
   "exclude": ["../node_modules"],

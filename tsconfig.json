@@ -1,5 +1,6 @@
 {
   "extends": "@sourcegraph/tsconfig",
+  "references": [{ "path": "shared" }, { "path": "web" }, { "path": "browser" }, { "path": "extrunner" }],
   "compilerOptions": {
     "target": "esnext",
     "module": "commonjs",
@@ -14,8 +15,10 @@
     "noErrorTruncation": true,
     "importHelpers": true,
     "resolveJsonModule": true,
+    "composite": true,
+    "declaration": true,
   },
 
-  "files": ["gulpfile.ts"],
-  "exclude": ["node_modules"],
+  "include": ["**/gulpfile.ts", "**/webpack.config.ts"],
+  "exclude": ["node_modules", "lsif"],
 }
