@@ -84,7 +84,7 @@ RUN apk update && apk add --no-cache \
 COPY --from=comby/comby:0.7.0@sha256:7e4995f7c294f447d0b06e3854a829126b210da9a64cbe32154fbe4468659e20 /usr/local/bin/comby /usr/local/bin/comby
 # hadolint ignore=DL3022
 COPY --from=sourcegraph/syntect_server:96e3f14@sha256:f2b5eb5ef162f349e98d2d772955724b8f2b0bf2925797a049d3752953474a88 /syntect_server /usr/local/bin/
-COPY --from=builder /usr/local/bin/universal-* /usr/local/bin/
+COPY --from=builder /output/bin/universal-* /usr/local/bin/
 # hadolint ignore=DL3022
 COPY --from=lsif-builder /output/lsif /lsif
 
