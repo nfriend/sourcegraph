@@ -117,7 +117,9 @@ func (s *Service) search(ctx context.Context, args protocol.SearchArgs) (result 
 func (s *Service) getDBFile(ctx context.Context, args protocol.SearchArgs) (string, error) {
 	diskcacheFile, err := s.cache.OpenWithPath(ctx, fmt.Sprintf("%d-%s@%s", symbolsDBVersion, args.Repo, args.CommitID), func(fetcherCtx context.Context, tempDBFile string) error {
 		err := s.writeAllSymbolsToNewDB(fetcherCtx, tempDBFile, args.Repo, args.CommitID)
+		// TODO@ggilmore: 🚨 remove debugging statement 🚨
 		if err != nil {
+			log15.Info("!!!!!!!  symbols writeAllSymbolsToNewDB error", "error", err)
 			if err == context.Canceled {
 				log15.Error("Unable to parse repository symbols within the context", "repo", args.Repo, "commit", args.CommitID, "query", args.Query)
 			}
@@ -126,6 +128,8 @@ func (s *Service) getDBFile(ctx context.Context, args protocol.SearchArgs) (stri
 		return nil
 	})
 	if err != nil {
+		// TODO@ggilmore: 🚨 remove debugging statement
+		log15.Info("!!!!!!!  symbols openwithpath error", "error", err)
 		return "", err
 	}
 	defer diskcacheFile.File.Close()

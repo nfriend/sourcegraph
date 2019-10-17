@@ -1,3 +1,16 @@
+FROM sourcegraph/builder:176b00c634@sha256:0aaa9e32b72bb2ba2b863becaa810e7a34d2f30dd1bc9420e9de347841bb5f49 as builder
+
+ARG VERSION="unknown"
+ENV VERSION ${VERSION}
+
+ENV OUTPUT_DIR=/output
+RUN mkdir -p ${OUTPUT_DIR}
+
+WORKDIR /src
+COPY . .
+
+RUN ./cmd/replacer/build.sh
+
 FROM sourcegraph/alpine:3.9@sha256:e9264d4748e16de961a2b973cc12259dee1d33473633beccb1dfb8a0e62c6459
 
 # hadolint ignore=DL3018
@@ -20,4 +33,4 @@ LABEL com.sourcegraph.github.url=https://github.com/sourcegraph/sourcegraph/comm
 ENV CACHE_DIR=/mnt/cache/replacer
 USER sourcegraph
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/replacer"]
-COPY replacer /usr/local/bin/
+COPY --from=builder /output/replacer /usr/local/bin/

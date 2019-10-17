@@ -1,13 +1,11 @@
 FROM alpine:3.10@sha256:72c42ed48c3a2db31b7dafe17d275b634664a708d901ec9fd57b1529280f01fb AS builder
 
-RUN apk add --no-cache nodejs-current=12.4.0-r0 nodejs-npm=10.16.3-r0
+# hadolint ignore=DL3018
+RUN apk add --no-cache bash nodejs-current=12.4.0-r0 nodejs-npm=10.16.3-r0
 RUN npm install -g yarn@1.17.3
 
-COPY package.json tsconfig.json yarn.lock /lsif/
-COPY src /lsif/src
-
-RUN yarn --cwd /lsif
-RUN yarn --cwd /lsif run build
+COPY . /lsif/
+RUN lsif/build.sh
 
 FROM alpine:3.9@sha256:72c42ed48c3a2db31b7dafe17d275b634664a708d901ec9fd57b1529280f01fb
 

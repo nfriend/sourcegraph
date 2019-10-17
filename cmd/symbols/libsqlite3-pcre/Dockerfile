@@ -1,9 +1,16 @@
+FROM sourcegraph/builder:176b00c634@sha256:0aaa9e32b72bb2ba2b863becaa810e7a34d2f30dd1bc9420e9de347841bb5f49 as builder
+
+ENV OUTPUT_DIR=/output
+RUN mkdir -p ${OUTPUT_DIR}
+
+WORKDIR /src
+COPY . .
+RUN ./build.sh
+
 FROM alpine:3.9@sha256:644fcb1a676b5165371437feaa922943aaf7afcfa8bfee4472f6860aad1ef2a0
 
-# hadolint ignore=DL3003,DL3018,DL4006
-RUN apk --no-cache add --virtual build-deps curl git gcc make libc-dev pcre-dev sqlite-dev && \
-  mkdir /sqlite3-pcre && \
-  curl -fsSL https://codeload.github.com/ralight/sqlite3-pcre/tar.gz/c98da412b431edb4db22d3245c99e6c198d49f7a | tar -C /sqlite3-pcre -xzvf - --strip 1 && \
-  cd /sqlite3-pcre && \
-  make && \
-  apk --no-cache --purge del build-deps
+# hadolint ignore=DL3018
+RUN apk --no-cache add pcre-dev
+
+COPY --from=builder /output/pcre.so /libsqlite3-pcre.so
+ENV LIBSQLITE3_PCRE /libsqlite3-pcre.so
