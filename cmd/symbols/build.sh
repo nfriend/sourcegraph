@@ -125,7 +125,7 @@ function buildExecutable() {
 function execute() {
     buildLibsqlite3Pcre
     buildExecutable
-    buildCtagsDockerImage
+    env IMAGE=ctags ./cmd/symbols/internal/pkg/ctags/docker.sh
     export LIBSQLITE3_PCRE="$libsqlite3PcrePath"
     export CTAGS_COMMAND="${CTAGS_COMMAND:=cmd/symbols/universal-ctags-dev}"
     export CTAGS_PROCESSES="${CTAGS_PROCESSES:=1}"
