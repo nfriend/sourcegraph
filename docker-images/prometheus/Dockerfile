@@ -1,4 +1,4 @@
-FROM prom/prometheus:v2.12.0@sha256:cd93b8711bb92eb9c437d74217311519e0a93bc55779aa664325dc83cd13cb32
+FROM prom/prometheus:v2.13.1@sha256:c906d6ecc3586d3fd00e2aab7a13c961d13f938dab5e7338c9973e15d5e7b62b
 
 LABEL org.opencontainers.image.url=https://sourcegraph.com/
 LABEL org.opencontainers.image.source=https://github.com/sourcegraph/sourcegraph/
