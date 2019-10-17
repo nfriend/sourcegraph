@@ -11,8 +11,8 @@ COPY . .
 RUN internal/pkg/ctags/build.sh
 
 WORKDIR /
-COPY .ctags.d /.ctags.d
 
 FROM alpine:3.9@sha256:644fcb1a676b5165371437feaa922943aaf7afcfa8bfee4472f6860aad1ef2a0
 
+COPY .ctags.d /.ctags.d
 COPY --from=builder /output/bin/universal-* /usr/local/bin/
