@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euxo pipefail
+set -exo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 BUILD_TYPE="${BUILD_TYPE:=dev}"
