@@ -77,22 +77,6 @@ RUN apk update && apk add --no-cache \
     'redis=3.2.12-r0' bind-tools ca-certificates git@edge \
     mailcap nginx openssh-client pcre su-exec tini nodejs-current=12.4.0-r0
 
-# IMPORTANT: If you update the syntect_server version below, you MUST confirm
-# the ENV variables from its Dockerfile (https://github.com/sourcegraph/syntect_server/blob/master/Dockerfile)
-# have been appropriately set in cmd/server/shared/shared.go.
-# hadolint ignore=DL3022
-COPY --from=comby/comby:0.7.0@sha256:7e4995f7c294f447d0b06e3854a829126b210da9a64cbe32154fbe4468659e20 /usr/local/bin/comby /usr/local/bin/comby
-# hadolint ignore=DL3022
-COPY --from=sourcegraph/syntect_server:96e3f14@sha256:f2b5eb5ef162f349e98d2d772955724b8f2b0bf2925797a049d3752953474a88 /syntect_server /usr/local/bin/
-COPY --from=builder /output/bin/universal-* /usr/local/bin/
-# hadolint ignore=DL3022
-COPY --from=lsif-builder /output/lsif /lsif
-
-# hadolint ignore=DL3022
-COPY --from=sourcegraph/prometheus:10.0.1@sha256:ba6dd9e33621801d553651191b4d4c64f866a6620374d48aedb92abad305e7ca /bin/prometheus /usr/local/bin
-# hadolint ignore=DL3022
-COPY --from=sourcegraph/prometheus:10.0.1@sha256:ba6dd9e33621801d553651191b4d4c64f866a6620374d48aedb92abad305e7ca /usr/share/prometheus /usr/share/prometheus
-
 # hadolint ignore=DL3018
 RUN set -eux && \
     addgroup -S grafana && \
@@ -103,13 +87,30 @@ RUN set -eux && \
 COPY --from=sourcegraph/grafana:10.0.2@sha256:ac3f89039007be1359a2308a0cd2f8aebdd85ee933a9ab1728fd7077ed103b67 /usr/share/grafana /usr/share/grafana
 
 # hadolint ignore=DL3022
+COPY --from=sourcegraph/grafana:10.0.2@sha256:ac3f89039007be1359a2308a0cd2f8aebdd85ee933a9ab1728fd7077ed103b67 /sg_config_grafana/provisioning/dashboards/sourcegraph/*json /sg_config_grafana/provisioning/dashboards/sourcegraph/
+
+# IMPORTANT: If you update the syntect_server version below, you MUST confirm
+# the ENV variables from its Dockerfile (https://github.com/sourcegraph/syntect_server/blob/master/Dockerfile)
+# have been appropriately set in cmd/server/shared/shared.go.
+# hadolint ignore=DL3022
+COPY --from=sourcegraph/syntect_server:96e3f14@sha256:f2b5eb5ef162f349e98d2d772955724b8f2b0bf2925797a049d3752953474a88 /syntect_server /usr/local/bin/
+
+# hadolint ignore=DL3022
+COPY --from=comby/comby:0.7.0@sha256:7e4995f7c294f447d0b06e3854a829126b210da9a64cbe32154fbe4468659e20 /usr/local/bin/comby /usr/local/bin/comby
+
+# hadolint ignore=DL3022
+COPY --from=sourcegraph/prometheus:10.0.1@sha256:ba6dd9e33621801d553651191b4d4c64f866a6620374d48aedb92abad305e7ca /bin/prometheus /usr/local/bin
+# hadolint ignore=DL3022
+COPY --from=sourcegraph/prometheus:10.0.1@sha256:ba6dd9e33621801d553651191b4d4c64f866a6620374d48aedb92abad305e7ca /usr/share/prometheus /usr/share/prometheus
+
+COPY --from=builder /output/bin/universal-* /usr/local/bin/
+# hadolint ignore=DL3022
 COPY --from=builder /output/pcre.so /libsqlite3-pcre.so
 ENV LIBSQLITE3_PCRE /libsqlite3-pcre.so
 
-COPY --from=builder /output /
-
 # hadolint ignore=DL3022
-COPY --from=sourcegraph/grafana:10.0.2@sha256:ac3f89039007be1359a2308a0cd2f8aebdd85ee933a9ab1728fd7077ed103b67 /sg_config_grafana/provisioning/dashboards/sourcegraph/*json /sg_config_grafana/provisioning/dashboards/sourcegraph/
+COPY --from=lsif-builder /output/lsif /lsif
+COPY --from=builder /output /
 
 RUN echo "hosts: files dns" > /etc/nsswitch.conf
 
