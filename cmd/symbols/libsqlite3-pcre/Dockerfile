@@ -1,10 +1,29 @@
-FROM sourcegraph/builder:176b00c634@sha256:0aaa9e32b72bb2ba2b863becaa810e7a34d2f30dd1bc9420e9de347841bb5f49 as builder
+# libsqlite3-pcre must be built using use Alpine (has musl) instead of Ubuntu (has glibc) (which sourcegraph/builder is based on.).
+# Since sourcegraph/server uses Alpine, libsqlite3-pcre must be built using musl. I was not able to figure out how to use Ubuntu
+# to cross-compile libsqlite3-pcre in a way that worked for Alpine (forcing "CC=musl-gcc" wasn't sufficient).
+
+FROM alpine:3.9@sha256:644fcb1a676b5165371437feaa922943aaf7afcfa8bfee4472f6860aad1ef2a0 as builder
 
 ENV OUTPUT_DIR=/output
 RUN mkdir -p ${OUTPUT_DIR}
 
+# hadolint ignore=DL3018
+RUN apk --no-cache add --virtual build-deps \
+    bash \
+    curl \
+    git \
+    gcc \
+    make \
+    libc-dev \
+    pcre-dev \
+    sqlite-dev
+
 WORKDIR /src
 COPY . .
+
+# Alpine-linux already uses musl by default
+ENV CC "gcc"
+
 RUN ./build.sh
 
 FROM alpine:3.9@sha256:644fcb1a676b5165371437feaa922943aaf7afcfa8bfee4472f6860aad1ef2a0

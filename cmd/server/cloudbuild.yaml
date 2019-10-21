@@ -1,5 +1,5 @@
 steps:
-  - name: "gcr.io/cloud-builders/curl"
+  - name: 'gcr.io/cloud-builders/curl'
     entrypoint: /bin/bash
     args:
       - -c
@@ -8,61 +8,63 @@ steps:
         mkdir sourcegraph &&
         curl -L https://github.com/sourcegraph/sourcegraph/archive/${_COMMIT_SHA}.tar.gz | tar xz -C sourcegraph --strip-components 1
 
-  - name: "gcr.io/cloud-builders/docker"
-    dir: "sourcegraph"
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'sourcegraph'
     args:
-      - "build"
+      - 'build'
 
-      - "--file=cmd/server/Dockerfile"
-      - "--tag=${_IMAGE}"
-      - "."
+      - '--file=cmd/server/Dockerfile'
+      - '--tag=${_IMAGE}'
+      - '.'
 
-      - "--build-arg"
-      - "COMMIT_SHA=${_COMMIT_SHA}"
+      - '--build-arg'
+      - 'COMMIT_SHA=${_COMMIT_SHA}'
 
-      - "--build-arg"
-      - "DATE=${_DATE}"
+      - '--build-arg'
+      - 'DATE=${_DATE}'
 
-      - "--build-arg"
-      - "VERSION=${_VERSION}"
+      - '--build-arg'
+      - 'VERSION=${_VERSION}'
 
-      - "--build-arg"
-      - "FRONTEND_PKG=${_FRONTEND_PKG}"
+      - '--build-arg'
+      - 'FRONTEND_PKG=${_FRONTEND_PKG}'
 
-      - "--build-arg"
-      - "MANAGEMENT_CONSOLE_PKG=${_MANAGEMENT_CONSOLE_PKG}"
+      - '--build-arg'
+      - 'MANAGEMENT_CONSOLE_PKG=${_MANAGEMENT_CONSOLE_PKG}'
 
-      - "--build-arg"
-      - "REPO_UPDATER_PKG=${_REPO_UPDATER_PKG}"
+      - '--build-arg'
+      - 'REPO_UPDATER_PKG=${_REPO_UPDATER_PKG}'
 
-      - "--build-arg"
-      - "SERVER_PKG=${_SERVER_PKG}"
+      - '--build-arg'
+      - 'SERVER_PKG=${_SERVER_PKG}'
 
-      - "--build-arg"
-      - "PRE_BUILD_SCRIPT=${_PRE_BUILD_SCRIPT}"
+      - '--build-arg'
+      - 'PRE_BUILD_SCRIPT=${_PRE_BUILD_SCRIPT}'
 
-      - "--build-arg"
-      - "CTAGS_VERSION=${_CTAGS_VERSION}"
-  - name: "gcr.io/cloud-builders/docker"
+      - '--build-arg'
+      - 'CTAGS_VERSION=${_CTAGS_VERSION}'
+  - name: 'gcr.io/cloud-builders/docker'
     args:
-      - "push"
-      - "${_IMAGE}"
+      - 'push'
+      - '${_IMAGE}'
 tags:
-  - "server"
-  - "${_COMMIT_SHA}"
+  - 'server'
+  - '${_COMMIT_SHA}'
+environment:
+  - 'docker-buildkit=1'
 images:
-  - "${_IMAGE}"
+  - '${_IMAGE}'
 options:
-  machineType: "N1_HIGHCPU_32"
+  machineType: 'N1_HIGHCPU_32'
 timeout: 1200s
 substitutions:
-  "_IMAGE": "us.gcr.io/sourcegraph-dev/server:latest"
-  "_COMMIT_SHA": "unknown"
-  "_DATE": "unknown"
-  "_VERSION": "unknown"
-  "_FRONTEND_PKG": "github.com/sourcegraph/sourcegraph/cmd/frontend"
-  "_MANAGEMENT_CONSOLE_PKG": "github.com/sourcegraph/sourcegraph/cmd/management-console"
-  "_REPO_UPDATER_PKG": "github.com/sourcegraph/sourcegraph/cmd/repo-updater"
-  "_SERVER_PKG": "github.com/sourcegraph/sourcegraph/cmd/server"
-  "_PRE_BUILD_SCRIPT": "cmd/server/pre-build.sh"
-  "_CTAGS_VERSION": "03f933a96d3ef87adbf9d167462d45ce69577edb"
+  '_IMAGE': 'us.gcr.io/sourcegraph-dev/server:latest'
+  '_COMMIT_SHA': 'unknown'
+  '_DATE': 'unknown'
+  '_VERSION': 'unknown'
+  '_FRONTEND_PKG': 'github.com/sourcegraph/sourcegraph/cmd/frontend'
+  '_MANAGEMENT_CONSOLE_PKG': 'github.com/sourcegraph/sourcegraph/cmd/management-console'
+  '_REPO_UPDATER_PKG': 'github.com/sourcegraph/sourcegraph/cmd/repo-updater'
+  '_SERVER_PKG': 'github.com/sourcegraph/sourcegraph/cmd/server'
+  '_PRE_BUILD_SCRIPT': 'cmd/server/pre-build.sh'
+  '_CTAGS_VERSION': '03f933a96d3ef87adbf9d167462d45ce69577edb'

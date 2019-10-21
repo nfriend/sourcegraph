@@ -35,6 +35,32 @@ COPY . .
 RUN ${PRE_BUILD_SCRIPT}
 RUN ./cmd/server/build.sh
 
+# libsqlite3-pcre must be built using use Alpine (has musl) instead of Ubuntu (has glibc) (which sourcegraph/builder is based on.).
+# Since sourcegraph/server uses Alpine, libsqlite3-pcre must be built using musl. I was not able to figure out how to use Ubuntu
+# to cross-compile libsqlite3-pcre in a way that worked for Alpine (forcing "CC=musl-gcc" wasn't sufficient).
+FROM alpine:3.10@sha256:72c42ed48c3a2db31b7dafe17d275b634664a708d901ec9fd57b1529280f01fb AS libsqlite3-pcre-builder
+
+ENV OUTPUT_DIR=/output
+RUN mkdir -p ${OUTPUT_DIR}
+
+# hadolint ignore=DL3018
+RUN apk --no-cache add --virtual build-deps \
+    bash \
+    curl \
+    git \
+    gcc \
+    make \
+    libc-dev \
+    pcre-dev \
+    sqlite-dev
+
+# Alpine-linux already uses musl by default
+ENV CC "gcc"
+
+WORKDIR /src
+COPY cmd/symbols/libsqlite3-pcre .
+RUN ./build.sh
+
 FROM alpine:3.10@sha256:72c42ed48c3a2db31b7dafe17d275b634664a708d901ec9fd57b1529280f01fb AS lsif-builder
 
 # hadolint ignore=DL3018
@@ -103,10 +129,11 @@ COPY --from=sourcegraph/prometheus:10.0.1@sha256:ba6dd9e33621801d553651191b4d4c6
 # hadolint ignore=DL3022
 COPY --from=sourcegraph/prometheus:10.0.1@sha256:ba6dd9e33621801d553651191b4d4c64f866a6620374d48aedb92abad305e7ca /usr/share/prometheus /usr/share/prometheus
 
-COPY --from=builder /output/bin/universal-* /usr/local/bin/
 # hadolint ignore=DL3022
-COPY --from=builder /output/pcre.so /libsqlite3-pcre.so
+COPY --from=libsqlite3-pcre-builder /output/pcre.so /libsqlite3-pcre.so
 ENV LIBSQLITE3_PCRE /libsqlite3-pcre.so
+
+COPY --from=builder /output/bin/universal-* /usr/local/bin/
 
 # hadolint ignore=DL3022
 COPY --from=lsif-builder /output/lsif /lsif
