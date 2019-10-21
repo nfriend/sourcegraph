@@ -10,6 +10,8 @@ steps:
 
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'sourcegraph'
+    env:
+      - 'DOCKER_BUILDKIT=1'
     args:
       - 'build'
 
@@ -50,8 +52,6 @@ steps:
 tags:
   - 'server'
   - '${_COMMIT_SHA}'
-environment:
-  - 'docker-buildkit=1'
 images:
   - '${_IMAGE}'
 options:
