@@ -10,8 +10,6 @@ steps:
 
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'sourcegraph'
-    env:
-      - 'DOCKER_BUILDKIT=1'
     args:
       - 'build'
 
