@@ -30,23 +30,19 @@ build_go_binaries() {
     echo "--- go binaries"
    ./cmd/server/build-go.sh
 }
-
 export -f build_go_binaries
 
 build_symbols_binary() {
     echo "--- symbols binary"
     ./cmd/symbols/build.sh buildExecutable
 }
-
 export -f build_symbols_binary
 
 build_universal_ctags() {
    echo "--- universal ctags binaries"
    cmd/symbols/internal/pkg/ctags/build.sh
 }
-
 export -f build_universal_ctags
-
 
 parallel_run ::: build_go_binaries build_symbols_binary build_universal_ctags
 
