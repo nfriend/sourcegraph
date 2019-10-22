@@ -1,4 +1,4 @@
-# libsqlite3-pcre must be built using use Alpine (has musl) instead of Ubuntu (has glibc) (which sourcegraph/builder is based on.).
+# libsqlite3-pcre must be built using Alpine (has musl) instead of Ubuntu (has glibc) (which sourcegraph/builder is based on.).
 # Since sourcegraph/server uses Alpine, libsqlite3-pcre must be built using musl. I was not able to figure out how to use Ubuntu
 # to cross-compile libsqlite3-pcre in a way that worked for Alpine (forcing "CC=musl-gcc" wasn't sufficient).
 
