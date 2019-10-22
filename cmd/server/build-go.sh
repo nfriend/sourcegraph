@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Builds all the Go binaries that comprise sourcegraph/server in parallel (except symbols, which requires
+# different settings and is built in cmd/symbols/build.sh "buildExecutable")
+
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 set -euxo pipefail
 
