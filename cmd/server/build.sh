@@ -26,7 +26,7 @@ export CTAGS_D_OUTPUT_PATH="$OUTPUT_DIR/.ctags.d"
 export SYMBOLS_EXECUTABLE_OUTPUT_PATH="$BINDIR/symbols"
 export BUILD_TYPE=dist
 
-parallel_run {} ::: "cmd/server/build-go.sh" "cmd/symbols/build.sh buildSymbolsDockerImageDependencies"
+parallel_run {} ::: "cmd/server/build-go.sh" "cmd/symbols/build.sh buildExecutable" "cmd/symbols/internal/pkg/ctags/build.sh"
 
 echo "--- prometheus config"
 cp -r docker-images/prometheus/config "$OUTPUT_DIR/sg_config_prometheus"
