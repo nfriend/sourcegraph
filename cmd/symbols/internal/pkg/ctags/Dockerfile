@@ -6,13 +6,13 @@ ENV CTAGS_VERSION ${CTAGS_VERSION}
 ENV OUTPUT_DIR=/output
 RUN mkdir -p ${OUTPUT_DIR}
 
+ENV CTAGS_D_OUTPUT_PATH ${OUTPUT_DIR}/.ctags.d
+
 WORKDIR /src
 COPY . .
 RUN internal/pkg/ctags/build.sh
 
-WORKDIR /
-
 FROM alpine:3.9@sha256:644fcb1a676b5165371437feaa922943aaf7afcfa8bfee4472f6860aad1ef2a0
 
-COPY .ctags.d /.ctags.d
+COPY --from=builder /output/.ctags.d /.ctags.d
 COPY --from=builder /output/bin/universal-* /usr/local/bin/

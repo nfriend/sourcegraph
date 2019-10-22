@@ -26,7 +26,29 @@ export CTAGS_D_OUTPUT_PATH="$OUTPUT_DIR/.ctags.d"
 export SYMBOLS_EXECUTABLE_OUTPUT_PATH="$BINDIR/symbols"
 export BUILD_TYPE=dist
 
-parallel_run {} ::: "cmd/server/build-go.sh" "cmd/symbols/build.sh buildExecutable" "cmd/symbols/internal/pkg/ctags/build.sh"
+build_go_binaries() {
+    echo "--- go binaries"
+   ./cmd/server/build-go.sh
+}
+
+export -f build_go_binaries
+
+build_symbols_binary() {
+    echo "--- symbols binary"
+    ./cmd/symbols/build.sh buildExecutable
+}
+
+export -f build_symbols_binary
+
+build_universal_ctags() {
+   echo "--- universal ctags binaries"
+   cmd/symbols/internal/pkg/ctags/build.sh
+}
+
+export -f build_universal_ctags
+
+
+parallel_run ::: build_go_binaries build_symbols_binary build_universal_ctags
 
 echo "--- prometheus config"
 cp -r docker-images/prometheus/config "$OUTPUT_DIR/sg_config_prometheus"

@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 
+cd "$(dirname "${BASH_SOURCE[0]}")/../../.."
 set -euxo pipefail
+
+if [ -z "$CTAGS_D_OUTPUT_PATH" ]; then
+    echo "buildCtags expects CTAGS_D_OUTPUT_PATH to be set."
+    exit 1
+fi
+
+cp -R .ctags.d "$CTAGS_D_OUTPUT_PATH"
 
 DOWNLOAD_DIR=`mktemp -d -t sgdockerbuild_XXXXXXX`
 cleanup() {
