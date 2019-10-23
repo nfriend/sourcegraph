@@ -84,6 +84,10 @@ func (r *changesetResolver) ID() graphql.ID {
 }
 
 func (r *changesetResolver) Repository(ctx context.Context) (*graphqlbackend.RepositoryResolver, error) {
+	return r.repoResolver()
+}
+
+func (r *changesetResolver) repoResolver(ctx context.Context) (*graphqlbackend.RepositoryResolver, error) {
 	if r.repo != nil {
 		return graphqlbackend.NewRepositoryResolver(&types.Repo{
 			ID:           api.RepoID(r.repo.ID),
@@ -178,4 +182,19 @@ func (r *changesetResolver) Events(ctx context.Context, args *struct {
 			Limit:        int(args.ConnectionArgs.GetFirst()),
 		},
 	}, nil
+}
+
+func (r *changesetResolver) Diff(ctx context.Context) (*graphqlbackend.RepositoryComparisonResolver, error) {
+	repo, err := r.repoResolver(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	base := "master"
+	head := "master"
+
+	return graphqlbackend.NewRepositoryComparison(ctx, repo, &graphqlbackend.RepositoryComparisonInput{
+		Base: &base,
+		Head: &head,
+	})
 }

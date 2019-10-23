@@ -521,6 +521,9 @@ type Changeset implements Node {
 
     # The review state of this changeset.
     reviewState: ChangesetReviewState!
+
+    # The diff of this changeset.
+    diff: RepositoryComparison!
 }
 
 # A list of changesets.
@@ -1559,7 +1562,7 @@ type Repository implements Node & GenericSearchResultInterface {
         base: String
         # The head of the diff ("new" or "right-hand side"), or "HEAD" if not specified.
         head: String
-    ): RepositoryComparison!
+    ): GitRepositoryComparison!
     # The repository's contributors.
     contributors(
         # The Git revision range to compute contributors in.
@@ -1710,14 +1713,38 @@ type GitRefConnection {
     pageInfo: PageInfo!
 }
 
+# A non-yet-committed preview of a diff on a repository.
+type PreviewRepositoryComparison implements RepositoryComparison {
+    # The repository that is the base (left-hand side) of this comparison.
+    baseRepository: Repository!
+
+    # The file diffs for each changed file.
+    fileDiffs(
+        # Return the first n file diffs from the list.
+        first: Int
+    ): FileDiffConnection!
+}
+
+# A subset of RepositoryComparison that does not require the diff to refer to concrete git commits.
+interface RepositoryComparison {
+    # The repository that is the base (left-hand side) of this comparison.
+    baseRepository: Repository!
+
+    # The file diffs for each changed file.
+    fileDiffs(
+        # Return the first n file diffs from the list.
+        first: Int
+    ): FileDiffConnection!
+}
+
 # The differences between two Git commits in a repository.
-type RepositoryComparison {
+type GitRepositoryComparison implements RepositoryComparison {
     # The repository that is the base (left-hand side) of this comparison.
     baseRepository: Repository!
 
     # The repository that is the head (right-hand side) of this comparison. Cross-repository
     # comparisons are not yet supported, so this is always equal to
-    # RepositoryComparison.baseRepository.
+    # GitRepositoryComparison.baseRepository.
     headRepository: Repository!
 
     # The range that this comparison represents.
@@ -2297,13 +2324,6 @@ interface File2 {
     externalURLs: [ExternalLink!]!
     # Highlight the file.
     highlight(disableTimeout: Boolean!, isLightTheme: Boolean!): HighlightedFile!
-    # Symbols defined in this file.
-    symbols(
-        # Returns the first n symbols from the list.
-        first: Int
-        # Return symbols matching the query.
-        query: String
-    ): SymbolConnection!
 }
 
 # File is temporarily preserved for backcompat with browser extension search API client code.

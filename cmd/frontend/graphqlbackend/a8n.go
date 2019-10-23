@@ -153,6 +153,7 @@ type ChangesetResolver interface {
 	Repository(ctx context.Context) (*RepositoryResolver, error)
 	Campaigns(ctx context.Context, args *struct{ graphqlutil.ConnectionArgs }) (CampaignsConnectionResolver, error)
 	Events(ctx context.Context, args *struct{ graphqlutil.ConnectionArgs }) (ChangesetEventsConnectionResolver, error)
+	Diff(ctx context.Context) (*RepositoryComparisonResolver, error)
 }
 
 type ChangesetEventsConnectionResolver interface {
