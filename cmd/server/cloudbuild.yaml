@@ -1,5 +1,6 @@
 steps:
-  - name: 'gcr.io/cloud-builders/curl'
+  - id: 'download-sourcegraph'
+    name: 'gcr.io/cloud-builders/curl'
     entrypoint: /bin/bash
     args:
       - -c
@@ -8,7 +9,8 @@ steps:
         mkdir sourcegraph &&
         curl -L https://github.com/sourcegraph/sourcegraph/archive/${_COMMIT_SHA}.tar.gz | tar xz -C sourcegraph --strip-components 1
 
-  - name: 'gcr.io/cloud-builders/docker'
+  - id: 'docker-build'
+    name: 'gcr.io/cloud-builders/docker'
     dir: 'sourcegraph'
     args:
       - 'build'
@@ -43,7 +45,8 @@ steps:
 
       - '--build-arg'
       - 'CTAGS_VERSION=${_CTAGS_VERSION}'
-  - name: 'gcr.io/cloud-builders/docker'
+  - id: 'docker-push'
+    name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - '${_IMAGE}'
