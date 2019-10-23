@@ -6,9 +6,64 @@ import { TracingContext, logAndTraceCall, addTags, logSpan } from './tracing'
 import * as constants from './constants'
 import { Database, sortMonikers, createRemoteUri } from './database'
 import { ConfigurationFetcher } from './config'
-import { DocumentData, MonikerData, DefinitionModel, ReferenceModel } from './database.models'
+import { DocumentData, MonikerData, DefinitionModel, ReferenceModel, PackageInformationData } from './database.models'
 import { uniqWith, isEqual } from 'lodash'
 import { LsifDump, DumpId } from './xrepo.models'
+
+/**
+ * The number of external repositories to search if a limit is not supplied.
+ */
+export const DEFAULT_REFERENCE_PAGINATION_LIMIT = 50
+
+/**
+ * Context describing the current request for paginated results.
+ */
+export interface ReferencePaginationContext {
+    /**
+     * The maximum number of external repositories to search.
+     */
+    limit?: number
+
+    /**
+     * Context describing the previous page of results.
+     */
+    cursor?: ReferencePaginationCursor
+}
+
+/**
+ * Context describing the previous page of results.
+ */
+export interface ReferencePaginationCursor {
+    /**
+     * TODO
+     */
+    dumpId: number
+
+    /**
+     * TODO
+     */
+    scheme: string
+
+    /**
+     * TODO
+     */
+    identifier: string
+
+    /**
+     * TODO
+     */
+    name: string
+
+    /**
+     * TODO
+     */
+    version: string | null
+
+    /**
+     * The number of external repositories to skip.
+     */
+    offset: number
+}
 
 /**
  * A wrapper around code intelligence operations.
@@ -113,6 +168,7 @@ export class Backend {
                     const localDefinitions = (await database.monikerResults(DefinitionModel, moniker, ctx)).map(loc =>
                         this.locationFromDatabase(dump.root, loc)
                     )
+
                     if (localDefinitions) {
                         return localDefinitions
                     }
@@ -137,7 +193,7 @@ export class Backend {
         document: DocumentData,
         moniker: MonikerData,
         model: typeof DefinitionModel | typeof ReferenceModel,
-        ctx: TracingContext
+        ctx: TracingContext = {}
     ): Promise<lsp.Location[]> {
         if (!moniker.packageInformationId) {
             return []
@@ -181,6 +237,7 @@ export class Backend {
                 packageEntity.dump.commit
             )
         )
+
         return (await db.monikerResults(model, moniker, ctx)).map(loc =>
             mapLocation(
                 uri => createRemoteUri(packageEntity, uri),
@@ -196,44 +253,33 @@ export class Backend {
      * references tables are queried for the target moniker.
      *
      * @param document The document containing the definition.
-     * @param moniker The target moniker.
      * @param dumpId The ID of the dump for which this database answers queries.
+     * @param moniker The target moniker.
+     * @param paginationContext Context describing the current request for paginated results.
      * @param ctx The tracing context.
      */
     private async remoteReferences(
-        document: DocumentData,
-        moniker: MonikerData,
         dumpId: DumpId,
-        ctx: TracingContext
-    ): Promise<lsp.Location[]> {
-        if (!moniker.packageInformationId) {
-            return []
-        }
-
-        const packageInformation = document.packageInformation.get(moniker.packageInformationId)
-        if (!packageInformation) {
-            return []
-        }
-
-        logSpan(ctx, 'package_information', {
-            moniker,
-            packageInformation,
-        })
-
-        const references = await this.xrepoDatabase.getReferences({
+        moniker: Pick<MonikerData, 'scheme' | 'identifier'>,
+        packageInformation: Pick<PackageInformationData, 'name' | 'version'>,
+        limit: number = DEFAULT_REFERENCE_PAGINATION_LIMIT,
+        offset: number = 0,
+        ctx: TracingContext = {}
+    ): Promise<{ locations: lsp.Location[]; count: number; cursor?: ReferencePaginationCursor }> {
+        const { references, count } = await this.xrepoDatabase.getReferences({
             scheme: moniker.scheme,
+            identifier: moniker.identifier,
             name: packageInformation.name,
             version: packageInformation.version,
-            value: moniker.identifier,
+            limit,
+            offset,
         })
 
         logSpan(ctx, 'package_references', {
-            moniker,
-            packageInformation,
             references: references.map(r => ({ repository: r.dump.repository, commit: r.dump.commit })),
         })
 
-        let allReferences: lsp.Location[] = []
+        let locations: lsp.Location[] = []
         for (const reference of references) {
             // Skip the remote reference that show up for ourselves - we've already gathered
             // these in the previous step of the references query.
@@ -252,10 +298,19 @@ export class Backend {
             const references = (await db.monikerResults(ReferenceModel, moniker, ctx)).map(loc =>
                 mapLocation(uri => createRemoteUri(reference, uri), this.locationFromDatabase(reference.dump.root, loc))
             )
-            allReferences = allReferences.concat(references)
+            locations = locations.concat(references)
         }
 
-        return allReferences
+        const cursor = {
+            dumpId,
+            scheme: moniker.scheme,
+            identifier: moniker.identifier,
+            name: packageInformation.name,
+            version: packageInformation.version,
+            offset: offset + limit,
+        }
+
+        return { locations, count, cursor }
     }
 
     /**
@@ -265,6 +320,7 @@ export class Backend {
      * @param commit The commit.
      * @param path The path of the document to which the position belongs.
      * @param position The current hover position.
+     * @param paginationContext Context describing the current request for paginated results.
      * @param ctx The tracing context.
      */
     public async references(
@@ -272,8 +328,32 @@ export class Backend {
         commit: string,
         path: string,
         position: lsp.Position,
+        paginationContext?: ReferencePaginationContext,
         ctx: TracingContext = {}
-    ): Promise<lsp.Location[]> {
+    ): Promise<{ locations: lsp.Location[]; cursor?: ReferencePaginationCursor }> {
+        if (paginationContext && paginationContext.cursor) {
+            const moniker = { scheme: paginationContext.cursor.scheme, identifier: paginationContext.cursor.identifier }
+            const packageInformation = {
+                name: paginationContext.cursor.name,
+                version: paginationContext.cursor.version,
+            }
+
+            const { locations: remoteResults, cursor: newCursor } = await this.remoteReferences(
+                paginationContext.cursor.dumpId,
+                moniker,
+                packageInformation,
+                paginationContext.limit,
+                paginationContext.cursor.offset,
+                ctx
+            )
+
+            return {
+                // TODO - determine source of duplication (and below)
+                locations: uniqWith(remoteResults, isEqual),
+                cursor: newCursor,
+            }
+        }
+
         const { database, dump, ctx: newCtx } = await this.loadClosestDatabase(repository, commit, path, ctx)
         let locations = (await database.references(this.pathToDatabase(dump.root, path), position, newCtx)).map(loc =>
             this.locationFromDatabase(dump.root, loc)
@@ -286,7 +366,7 @@ export class Backend {
             ctx
         )
         if (!document || ranges.length === 0) {
-            return []
+            return { locations: [] }
         }
 
         // Next, we do a moniker search in two stages, described below. We process the
@@ -321,16 +401,42 @@ export class Backend {
                     locations = locations.concat(await this.lookupMoniker(document, moniker, ReferenceModel, ctx))
                 }
 
-                // Get locations in all packages
-                const remoteResults = await this.remoteReferences(document, moniker, dump.id, ctx)
-                if (remoteResults) {
+                if (!moniker.packageInformationId) {
+                    continue
+                }
+
+                const packageInformation = document.packageInformation.get(moniker.packageInformationId)
+                if (!packageInformation) {
+                    continue
+                }
+
+                logSpan(ctx, 'package_information', {
+                    moniker,
+                    packageInformation,
+                })
+
+                const { locations: remoteResults, cursor: newCursor } = await this.remoteReferences(
+                    dump.id,
+                    moniker,
+                    packageInformation,
+                    paginationContext && paginationContext.limit,
+                    paginationContext && paginationContext.cursor && paginationContext.cursor.offset,
+                    ctx
+                )
+
+                if (!remoteResults) {
+                    continue
+                }
+
+                return {
                     // TODO - determine source of duplication (and below)
-                    return uniqWith(locations.concat(remoteResults), isEqual)
+                    locations: uniqWith(locations.concat(remoteResults), isEqual),
+                    cursor: newCursor,
                 }
             }
         }
 
-        return uniqWith(locations, isEqual)
+        return { locations: uniqWith(locations, isEqual) }
     }
 
     /**
@@ -370,7 +476,7 @@ export class Backend {
         repository: string,
         commit: string,
         file: string,
-        ctx: TracingContext
+        ctx: TracingContext = {}
     ): Promise<{ database: Database; dump: LsifDump; ctx: TracingContext }> {
         return await logAndTraceCall(ctx, 'loading closest database', async ctx => {
             // Determine the closest commit that we actually have LSIF data for. If the commit is
