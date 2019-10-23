@@ -10,6 +10,7 @@
   "updatedDate": 1563286307998,
   "fromRef": {
    "id": "refs/heads/release-testing-pr",
+   "displayId": "release-testing-pr",
    "repository": {
     "slug": "vegeta",
     "project": {
@@ -19,6 +20,7 @@
   },
   "toRef": {
    "id": "refs/heads/master",
+   "displayId": "master",
    "repository": {
     "slug": "vegeta",
     "project": {

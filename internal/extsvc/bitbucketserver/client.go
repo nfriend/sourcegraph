@@ -734,6 +734,7 @@ type Project struct {
 
 type Ref struct {
 	ID         string `json:"id"`
+	DisplayID  string `json:"displayId"`
 	Repository struct {
 		Slug    string `json:"slug"`
 		Project struct {
