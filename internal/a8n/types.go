@@ -223,6 +223,32 @@ func (t *Changeset) Events() (events []*ChangesetEvent) {
 	return events
 }
 
+// HeadRefName returns the name of the HEAD reference associated with the
+// Changeset on the codehost.
+func (t *Changeset) HeadRefName() (string, error) {
+	switch m := t.Metadata.(type) {
+	case *github.PullRequest:
+		return m.HeadRefName, nil
+	case *bitbucketserver.PullRequest:
+		return m.FromRef.DisplayID, nil
+	default:
+		return "", errors.New("unknown changeset type")
+	}
+}
+
+// BaseRefName returns the name of the base reference associated with the
+// Changeset on the codehost.
+func (t *Changeset) BaseRefName() (string, error) {
+	switch m := t.Metadata.(type) {
+	case *github.PullRequest:
+		return m.BaseRefName, nil
+	case *bitbucketserver.PullRequest:
+		return m.ToRef.DisplayID, nil
+	default:
+		return "", errors.New("unknown changeset type")
+	}
+}
+
 // SelectReviewState computes the single review state for a given set of
 // ChangesetReviewStates. Since a pull request, for example, can have multiple
 // reviews with different states, we need a function to determine what the
