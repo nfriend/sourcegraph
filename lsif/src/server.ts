@@ -15,7 +15,7 @@ import {
 import { dbFilename, dbFilenameOld, ensureDirectory, readEnvInt } from './util'
 import { createGzip } from 'mz/zlib'
 import { createPostgresConnection } from './connection'
-import { Backend } from './backend'
+import { Backend, ReferencePaginationCursor } from './backend'
 import { logger as loggingMiddleware } from 'express-winston'
 import { Logger } from 'winston'
 import { pipeline as _pipeline, Readable } from 'stream'
@@ -343,22 +343,35 @@ async function lsifEndpoints(
         bodyParser.json({ limit: '1mb' }),
         wrap(
             async (req: express.Request & { span?: Span }, res: express.Response): Promise<void> => {
-                const { repository, commit, limit: limitRaw } = req.query
+                const { repository, commit, limit: limitRaw, cursor: cursorRaw } = req.query
                 const { path, position } = req.body
                 checkRepository(repository)
                 checkCommit(commit)
 
                 const limit = parseInt(limitRaw, 10) || undefined
-                // TODO - decode cursor from token
 
-                const { locations } = await backend.references(
+                let cursor: ReferencePaginationCursor | undefined
+                try {
+                    // TODO - validate
+                    cursor = JSON.parse(new Buffer(cursorRaw, 'base64').toString('ascii'))
+                } catch (error) {
+                    // TODO - Invalid cursor
+                }
+
+                const { locations, cursor: endCursor } = await backend.references(
                     repository,
                     commit,
                     path,
                     position,
-                    { limit },
+                    { limit, cursor },
                     createTracingContext(req, { repository, commit })
                 )
+
+                // TODO
+                logger.debug('pagination', {
+                    endCursor,
+                    encoded: new Buffer(JSON.stringify(endCursor)).toString('base64'),
+                })
 
                 res.json(locations)
             }
