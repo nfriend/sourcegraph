@@ -35,27 +35,27 @@ export interface ReferencePaginationContext {
  */
 export interface ReferencePaginationCursor {
     /**
-     * TODO
+     * The identifier of the dump that contains the target range.
      */
     dumpId: number
 
     /**
-     * TODO
+     * The scheme of the moniker that has remote results.
      */
     scheme: string
 
     /**
-     * TODO
+     * The identifier of the moniker that has remote results.
      */
     identifier: string
 
     /**
-     * TODO
+     * The name of the package that has remote results.
      */
     name: string
 
     /**
-     * TODO
+     * The version of the package that has remote results.
      */
     version: string | null
 
