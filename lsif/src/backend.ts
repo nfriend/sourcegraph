@@ -91,7 +91,7 @@ export class Backend {
      *
      * @param repository The repository name.
      * @param commit The commit.
-     * @param path The path o fthe document.
+     * @param path The path of the document.
      * @param ctx The tracing context.
      */
     public async exists(repository: string, commit: string, path: string, ctx: TracingContext = {}): Promise<boolean> {
@@ -178,6 +178,35 @@ export class Backend {
     }
 
     /**
+     * Retrieve the package information from associated with the given moniker.
+     *
+     * @param document The document containing an instance of the moniker.
+     * @param moniker The target moniker.
+     * @param ctx The tracing context.
+     */
+    private lookupPackageInformation(
+        document: DocumentData,
+        moniker: MonikerData,
+        ctx: TracingContext = {}
+    ): PackageInformationData | undefined {
+        if (!moniker.packageInformationId) {
+            return undefined
+        }
+
+        const packageInformation = document.packageInformation.get(moniker.packageInformationId)
+        if (!packageInformation) {
+            return undefined
+        }
+
+        logSpan(ctx, 'package_information', {
+            moniker,
+            packageInformation,
+        })
+
+        return packageInformation
+    }
+
+    /**
      * Find the locations attached to the target moniker outside of the current database. If
      * the moniker has attached package information, then the cross-repo database is queried
      * for the target package. That database is opened, and its definitions table is queried
@@ -194,19 +223,10 @@ export class Backend {
         model: typeof DefinitionModel | typeof ReferenceModel,
         ctx: TracingContext = {}
     ): Promise<lsp.Location[]> {
-        if (!moniker.packageInformationId) {
-            return []
-        }
-
-        const packageInformation = document.packageInformation.get(moniker.packageInformationId)
+        const packageInformation = this.lookupPackageInformation(document, moniker, ctx)
         if (!packageInformation) {
             return []
         }
-
-        logSpan(ctx, 'package_information', {
-            moniker,
-            packageInformation,
-        })
 
         const packageEntity = await this.xrepoDatabase.getPackage(
             moniker.scheme,
@@ -252,7 +272,7 @@ export class Backend {
      *
      * @param dumpId The ID of the dump for which this database answers queries.
      * @param moniker The target moniker.
-     * @param paginationContext Context describing the current request for paginated results.
+     * @param packageInformation The target package.
      * @param limit The maximum number of databases to open.
      * @param offset The number of databases to skip.
      * @param ctx The tracing context.
@@ -348,7 +368,10 @@ export class Backend {
             this.locationFromDatabase(dump.root, loc)
         )
 
-        // Try to find definitions in other dumps
+        // Next, we do a moniker search in two stages, described below. We process the
+        // monikers for each range sequentially in order of priority for each stage, such
+        // that import monikers, if any exist, will be processed first.
+
         const { document, ranges } = await database.getRangeByPosition(
             this.pathToDatabase(dump.root, path),
             position,
@@ -357,10 +380,6 @@ export class Backend {
         if (!document || ranges.length === 0) {
             return { locations: [] }
         }
-
-        // Next, we do a moniker search in two stages, described below. We process the
-        // monikers for each range sequentially in order of priority for each stage, such
-        // that import monikers, if any exist, will be processed first.
 
         for (const range of ranges) {
             const monikers = sortMonikers(
@@ -390,19 +409,10 @@ export class Backend {
                     locations = locations.concat(await this.lookupMoniker(document, moniker, ReferenceModel, ctx))
                 }
 
-                if (!moniker.packageInformationId) {
-                    continue
-                }
-
-                const packageInformation = document.packageInformation.get(moniker.packageInformationId)
+                const packageInformation = this.lookupPackageInformation(document, moniker, ctx)
                 if (!packageInformation) {
                     continue
                 }
-
-                logSpan(ctx, 'package_information', {
-                    moniker,
-                    packageInformation,
-                })
 
                 const { locations: remoteResults } = await this.remoteReferences(
                     dump.id,
@@ -413,23 +423,21 @@ export class Backend {
                     ctx
                 )
 
-                if (!remoteResults) {
-                    continue
-                }
+                if (remoteResults) {
+                    const cursor = {
+                        dumpId: dump.id,
+                        scheme: moniker.scheme,
+                        identifier: moniker.identifier,
+                        name: packageInformation.name,
+                        version: packageInformation.version,
+                        offset: offset + limit,
+                    }
 
-                const cursor = {
-                    dumpId: dump.id,
-                    scheme: moniker.scheme,
-                    identifier: moniker.identifier,
-                    name: packageInformation.name,
-                    version: packageInformation.version,
-                    offset: offset + limit,
-                }
-
-                return {
-                    // TODO - determine source of duplication (and below)
-                    locations: uniqWith(locations.concat(remoteResults), isEqual),
-                    cursor,
+                    return {
+                        // TODO - determine source of duplication (and below)
+                        locations: uniqWith(locations.concat(remoteResults), isEqual),
+                        cursor,
+                    }
                 }
             }
         }

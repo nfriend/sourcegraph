@@ -321,7 +321,7 @@ describe('XrepoDatabase', () => {
         expect(visibleDumps.map((dump: LsifDump) => dump.id).sort()).toEqual([dump1.id, dump2.id, dump3.id, dump4.id])
     })
 
-    it.only('should not set dumps visible farther than MAX_TRAVERSAL_LIMIT', async () => {
+    it('should not set dumps visible farther than MAX_TRAVERSAL_LIMIT', async () => {
         if (!xrepoDatabase) {
             fail('failed beforeAll')
         }
