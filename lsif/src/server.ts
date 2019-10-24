@@ -348,14 +348,9 @@ async function lsifEndpoints(
                 checkRepository(repository)
                 checkCommit(commit)
 
-                const limit = parseInt(limitRaw, 10) || undefined
-
-                let cursor: ReferencePaginationCursor | undefined
-                try {
-                    // TODO - validate
-                    cursor = JSON.parse(new Buffer(cursorRaw, 'base64').toString('ascii'))
-                } catch (error) {
-                    // TODO - Invalid cursor
+                const cursor = {
+                    limit: limitRaw && parseInt(limitRaw, 10),
+                    cursor: parseCursor<ReferencePaginationCursor>(cursorRaw),
                 }
 
                 const { locations, cursor: endCursor } = await backend.references(
@@ -363,7 +358,7 @@ async function lsifEndpoints(
                     commit,
                     path,
                     position,
-                    { limit, cursor },
+                    cursor,
                     createTracingContext(req, { repository, commit })
                 )
 
@@ -409,7 +404,7 @@ async function lsifEndpoints(
  */
 function checkRepository(repository: any): void {
     if (typeof repository !== 'string') {
-        throw Object.assign(new Error('Must specify the repository (usually of the form github.com/user/repo)'), {
+        throw Object.assign(new Error(`Must specify a repository ${repository}`), {
             status: 400,
         })
     }
@@ -430,6 +425,23 @@ function checkCommit(commit: any): void {
 function checkFile(file: any): void {
     if (typeof file !== 'string') {
         throw Object.assign(new Error(`Must specify a file ${file}`), { status: 400 })
+    }
+}
+
+/**
+ * Parse a base64-encoded JSON payload into the expected type.
+ *
+ * @param cursorRaw The raw cursor.
+ */
+function parseCursor<T>(cursorRaw: any): T | undefined {
+    if (cursorRaw === undefined) {
+        return undefined
+    }
+
+    try {
+        return JSON.parse(new Buffer(cursorRaw, 'base64').toString('ascii'))
+    } catch {
+        throw Object.assign(new Error(`Malformed cursor supplied ${cursorRaw}`), { status: 400 })
     }
 }
 
