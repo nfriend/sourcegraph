@@ -2,6 +2,7 @@ package resolvers
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"sync"
 
@@ -84,7 +85,7 @@ func (r *changesetResolver) ID() graphql.ID {
 }
 
 func (r *changesetResolver) Repository(ctx context.Context) (*graphqlbackend.RepositoryResolver, error) {
-	return r.repoResolver()
+	return r.repoResolver(ctx)
 }
 
 func (r *changesetResolver) repoResolver(ctx context.Context) (*graphqlbackend.RepositoryResolver, error) {
@@ -190,8 +191,21 @@ func (r *changesetResolver) Diff(ctx context.Context) (*graphqlbackend.Repositor
 		return nil, err
 	}
 
-	base := "master"
-	head := "master"
+	base, err := r.Changeset.BaseRefName()
+	if err != nil {
+		return nil, err
+	}
+	if base == "" {
+		return nil, errors.New("changeset base ref name could not be determined")
+	}
+
+	head, err := r.Changeset.HeadRefName()
+	if err != nil {
+		return nil, err
+	}
+	if head == "" {
+		return nil, errors.New("changeset head ref name could not be determined")
+	}
 
 	return graphqlbackend.NewRepositoryComparison(ctx, repo, &graphqlbackend.RepositoryComparisonInput{
 		Base: &base,

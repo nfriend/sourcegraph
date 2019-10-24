@@ -16,6 +16,19 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/vcs/git"
 )
 
+type PreviewRepositoryComparison interface {
+	BaseRepository() *RepositoryResolver
+	FileDiffs(args *struct{ First *int32 }) *fileDiffConnectionResolver
+}
+
+type GitRepositoryComparison interface {
+	BaseRepository() *RepositoryResolver
+	HeadRepository() *RepositoryResolver
+	FileDiffs(args *struct{ First *int32 }) *fileDiffConnectionResolver
+	Range() *gitRevisionRange
+	Commits(args *struct{ First *int32 }) *gitCommitConnectionResolver
+}
+
 // 4b825dc642cb6eb9a060e54bf8d69288fbee4904 is `git hash-object -t tree /dev/null`, which is used as the base
 // when computing the `git diff` of the root commit.
 const devNullSHA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
@@ -87,6 +100,14 @@ type RepositoryComparisonResolver struct {
 	baseRevspec, headRevspec string
 	base, head               *GitCommitResolver
 	repo                     *RepositoryResolver
+}
+
+func (r *RepositoryComparisonResolver) ToPreviewRepositoryComparison() (PreviewRepositoryComparison, bool) {
+	return r, true
+}
+
+func (r *RepositoryComparisonResolver) ToGitRepositoryComparison() (GitRepositoryComparison, bool) {
+	return r, true
 }
 
 func (r *RepositoryComparisonResolver) BaseRepository() *RepositoryResolver { return r.repo }
