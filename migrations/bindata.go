@@ -50,6 +50,8 @@
 // 1528395605_drop_recent_searches.up.sql (55B)
 // 1528395606_lsif_add_visible_at_tip_flag.down.sql (361B)
 // 1528395606_lsif_add_visible_at_tip_flag.up.sql (273B)
+// 1528395607_lsif_add_dump_uploaded_at.down.sql (65B)
+// 1528395607_lsif_add_dump_uploaded_at.up.sql (112B)
 
 package migrations
 
@@ -1118,6 +1120,46 @@ func _1528395606_lsif_add_visible_at_tip_flagUpSql() (*asset, error) {
 	return a, nil
 }
 
+var __1528395607_lsif_add_dump_uploaded_atDownSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x72\x72\x75\xf7\xf4\xb3\xe6\xe2\x72\xf4\x09\x71\x0d\x52\x08\x71\x74\xf2\x71\x55\xc8\x29\xce\x4c\x8b\x4f\x29\xcd\x2d\x28\x56\x70\x09\xf2\x0f\x50\x70\xf6\xf7\x09\xf5\xf5\x53\x28\x2d\xc8\xc9\x4f\x4c\x49\x4d\x89\x4f\x2c\xb1\xe6\xe2\x72\xf6\xf7\xf5\xf5\x0c\xb1\xe6\x02\x04\x00\x00\xff\xff\x93\xd0\x9f\xa0\x41\x00\x00\x00")
+
+func _1528395607_lsif_add_dump_uploaded_atDownSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__1528395607_lsif_add_dump_uploaded_atDownSql,
+		"1528395607_lsif_add_dump_uploaded_at.down.sql",
+	)
+}
+
+func _1528395607_lsif_add_dump_uploaded_atDownSql() (*asset, error) {
+	bytes, err := _1528395607_lsif_add_dump_uploaded_atDownSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "1528395607_lsif_add_dump_uploaded_at.down.sql", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb3, 0x94, 0x6d, 0x82, 0x3b, 0x3e, 0x3a, 0x63, 0x6e, 0x9e, 0x8a, 0x13, 0xe5, 0xc1, 0xb5, 0x64, 0xf1, 0xf8, 0x7, 0xfe, 0x4d, 0xdb, 0xe1, 0x9d, 0xb, 0xc7, 0xc9, 0xbc, 0xd0, 0xf0, 0x5b, 0xa3}}
+	return a, nil
+}
+
+var __1528395607_lsif_add_dump_uploaded_atUpSql = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x1c\xc7\x31\x0a\xc3\x20\x14\x06\xe0\xdd\x53\xfc\x63\x7b\x86\x4c\x26\xda\x12\x78\x2a\x94\xe7\x1c\x04\x2d\x15\x62\x14\x34\x04\x7a\xfa\x42\xc7\x6f\xd6\xcf\xd5\x4e\x42\x48\x62\xfd\x02\xcb\x99\x34\xf6\x9e\xdf\x5b\x3c\x4b\xeb\x90\x4a\x61\x71\xe4\x8d\xc5\xd9\xf6\x1a\x62\x8a\x5b\x18\x18\xb9\xa4\x3e\x42\x69\xb8\xf2\xf8\xfc\x89\x6f\x3d\x12\xac\x63\x58\x4f\x04\xa5\x1f\xd2\x13\xe3\xa8\xd7\xed\x3e\x09\xb1\x38\x63\x56\x9e\xc4\x2f\x00\x00\xff\xff\x27\xa6\x5f\x36\x70\x00\x00\x00")
+
+func _1528395607_lsif_add_dump_uploaded_atUpSqlBytes() ([]byte, error) {
+	return bindataRead(
+		__1528395607_lsif_add_dump_uploaded_atUpSql,
+		"1528395607_lsif_add_dump_uploaded_at.up.sql",
+	)
+}
+
+func _1528395607_lsif_add_dump_uploaded_atUpSql() (*asset, error) {
+	bytes, err := _1528395607_lsif_add_dump_uploaded_atUpSqlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "1528395607_lsif_add_dump_uploaded_at.up.sql", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x12, 0xe6, 0xcf, 0x60, 0xa8, 0xb6, 0xa7, 0xab, 0x73, 0xbc, 0x49, 0x2, 0x4, 0x79, 0x57, 0xcf, 0x1d, 0x5a, 0x63, 0x6b, 0x5d, 0xd9, 0x55, 0x57, 0x1c, 0xc, 0xfc, 0xf, 0x7a, 0x65, 0xc7, 0xd5}}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -1308,6 +1350,10 @@ var _bindata = map[string]func() (*asset, error){
 	"1528395606_lsif_add_visible_at_tip_flag.down.sql": _1528395606_lsif_add_visible_at_tip_flagDownSql,
 
 	"1528395606_lsif_add_visible_at_tip_flag.up.sql": _1528395606_lsif_add_visible_at_tip_flagUpSql,
+
+	"1528395607_lsif_add_dump_uploaded_at.down.sql": _1528395607_lsif_add_dump_uploaded_atDownSql,
+
+	"1528395607_lsif_add_dump_uploaded_at.up.sql": _1528395607_lsif_add_dump_uploaded_atUpSql,
 }
 
 // AssetDir returns the file names below a certain
@@ -1401,6 +1447,8 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"1528395605_drop_recent_searches.up.sql":                                   {_1528395605_drop_recent_searchesUpSql, map[string]*bintree{}},
 	"1528395606_lsif_add_visible_at_tip_flag.down.sql":                         {_1528395606_lsif_add_visible_at_tip_flagDownSql, map[string]*bintree{}},
 	"1528395606_lsif_add_visible_at_tip_flag.up.sql":                           {_1528395606_lsif_add_visible_at_tip_flagUpSql, map[string]*bintree{}},
+	"1528395607_lsif_add_dump_uploaded_at.down.sql":                            {_1528395607_lsif_add_dump_uploaded_atDownSql, map[string]*bintree{}},
+	"1528395607_lsif_add_dump_uploaded_at.up.sql":                              {_1528395607_lsif_add_dump_uploaded_atUpSql, map[string]*bintree{}},
 }}
 
 // RestoreAsset restores an asset under the given directory.
