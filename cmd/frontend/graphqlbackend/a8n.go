@@ -35,6 +35,18 @@ type UpdateCampaignArgs struct {
 	}
 }
 
+type CampaignPlanRunArg struct {
+	Name  string
+	Value string
+}
+
+type CreateCampaignPlanArgs struct {
+	Input struct {
+		CampaignPlanSpec string
+		Args        []CampaignPlanRunArg
+	}
+}
+
 type DeleteCampaignArgs struct {
 	Campaign graphql.ID
 }
@@ -44,6 +56,10 @@ type CreateChangesetsArgs struct {
 		Repository graphql.ID
 		ExternalID string
 	}
+}
+
+type RepoSearcher interface {
+	SearchRepos(ctx context.Context, query string) ([]*RepositoryResolver, error)
 }
 
 type A8NResolver interface {
@@ -58,6 +74,11 @@ type A8NResolver interface {
 	Changesets(ctx context.Context, args *graphqlutil.ConnectionArgs) (ChangesetsConnectionResolver, error)
 
 	AddChangesetsToCampaign(ctx context.Context, args *AddChangesetsToCampaignArgs) (CampaignResolver, error)
+
+	CreateCampaignPlan(ctx context.Context, args *CreateCampaignPlanArgs) (CampaignPlanResolver, error)
+
+	HasRepoSearcher() bool
+	SetRepoSearcher(RepoSearcher)
 }
 
 var onlyInEnterprise = errors.New("campaigns and changesets are only available in enterprise")
@@ -67,6 +88,16 @@ func (r *schemaResolver) AddChangesetsToCampaign(ctx context.Context, args *AddC
 		return nil, onlyInEnterprise
 	}
 	return r.a8nResolver.AddChangesetsToCampaign(ctx, args)
+}
+
+func (r *schemaResolver) CreateCampaignPlan(ctx context.Context, args *CreateCampaignPlanArgs) (CampaignPlanResolver, error) {
+	if r.a8nResolver == nil {
+		return nil, onlyInEnterprise
+	}
+	if !r.a8nResolver.HasRepoSearcher() {
+		r.a8nResolver.SetRepoSearcher(r)
+	}
+	return r.a8nResolver.CreateCampaignPlan(ctx, args)
 }
 
 func (r *schemaResolver) CreateCampaign(ctx context.Context, args *CreateCampaignArgs) (CampaignResolver, error) {
@@ -127,6 +158,7 @@ type CampaignResolver interface {
 	UpdatedAt() DateTime
 	Changesets(ctx context.Context, args struct{ graphqlutil.ConnectionArgs }) ChangesetsConnectionResolver
 	ChangesetCountsOverTime(ctx context.Context, args *ChangesetCountsArgs) ([]ChangesetCountsResolver, error)
+	CampaignPlan(ctx context.Context) (CampaignPlanResolver, error)
 }
 
 type CampaignsConnectionResolver interface {
@@ -176,4 +208,33 @@ type ChangesetCountsResolver interface {
 	OpenApproved() int32
 	OpenChangesRequested() int32
 	OpenPending() int32
+}
+
+type CampaignPlanArgResolver interface {
+	Name() string
+	Value() string
+}
+
+type CampaignPlanResolver interface {
+	Spec() string
+	Arguments() []CampaignPlanArgResolver
+
+	CreatedAt() DateTime
+	UpdatedAt() DateTime
+
+	Jobs(context.Context) ([]CampaignJobResolver, error)
+}
+
+type CampaignJobResolver interface {
+	CampaignPlan(context.Context) (CampaignPlanResolver, error)
+	Repo(ctx context.Context) (*RepositoryResolver, error)
+
+	Revision() GitObjectID
+
+	Diff() *string
+
+	StartedAt() DateTime
+	FinishedAt() DateTime
+
+	Error() *string
 }

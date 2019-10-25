@@ -3,6 +3,9 @@ package resolvers
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"sync"
+	"time"
 
 	"github.com/graph-gophers/graphql-go"
 	"github.com/graph-gophers/graphql-go/relay"
@@ -16,17 +19,28 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/a8n"
 	"github.com/sourcegraph/sourcegraph/internal/api"
 	"github.com/sourcegraph/sourcegraph/internal/httpcli"
+	log15 "gopkg.in/inconshreveable/log15.v2"
 )
 
 // Resolver is the GraphQL resolver of all things A8N.
 type Resolver struct {
 	store       *ee.Store
 	httpFactory *httpcli.Factory
+
+	repoSearcher graphqlbackend.RepoSearcher
 }
 
 // NewResolver returns a new Resolver whose store uses the given db
 func NewResolver(db *sql.DB) graphqlbackend.A8NResolver {
 	return &Resolver{store: ee.NewStore(db)}
+}
+
+func (r *Resolver) HasRepoSearcher() bool {
+	return r.repoSearcher != nil
+}
+
+func (r *Resolver) SetRepoSearcher(rs graphqlbackend.RepoSearcher) {
+	r.repoSearcher = rs
 }
 
 func (r *Resolver) ChangesetByID(ctx context.Context, id graphql.ID) (graphqlbackend.ChangesetResolver, error) {
@@ -337,3 +351,115 @@ func (r *Resolver) Changesets(ctx context.Context, args *graphqlutil.ConnectionA
 		},
 	}, nil
 }
+
+func (r *Resolver) CreateCampaignPlan(ctx context.Context, args *graphqlbackend.CreateCampaignPlanArgs) (graphqlbackend.CampaignPlanResolver, error) {
+	// 🚨 SECURITY: Only site admins may update campaigns for now
+	if err := backend.CheckCurrentUserIsSiteAdmin(ctx); err != nil {
+		return nil, err
+	}
+
+	// If `CampaignPlanSpec` is defined on `Campaign` we don't need to pass it in
+	specName := args.Input.CampaignPlanSpec
+	if specName == "" {
+		return nil, errors.New("cannot run Campaign without CampaignPlanSpec")
+	}
+	spec, ok := a8n.CampaignPlanSpecs[specName]
+	if !ok {
+		return nil, errors.New("Spec does not exist. Don't know how to run this campaign")
+	}
+
+	// Validate user-supplied args
+	campaignPlanArgs := make(map[string]string, len(args.Input.Args))
+	for _, pair := range args.Input.Args {
+		campaignPlanArgs[pair.Name] = pair.Value
+	}
+	if len(campaignPlanArgs) != len(spec.Parameters) {
+		return nil, errors.New("wrong number of arguments supplied by user")
+	}
+	for _, param := range spec.Parameters {
+		if _, ok := campaignPlanArgs[param]; !ok {
+			return nil, fmt.Errorf("user did not specify parameter %s", param)
+		}
+	}
+
+	// Create CampaignPlan
+	mod := &a8n.CampaignPlan{
+		CampaignPlanSpec: specName,
+		Arguments:   campaignPlanArgs,
+	}
+
+	if err := r.store.CreateCampaignPlan(ctx, mod); err != nil {
+		return nil, err
+	}
+
+	// Search repositories over which to execute code modification
+	if r.repoSearcher == nil {
+		return nil, errors.New("No repo search possible")
+	}
+	repos, err := r.repoSearcher.SearchRepos(ctx, spec.SearchQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	// Run a CampaignJob on each repo
+	var wg sync.WaitGroup
+	for _, repo := range repos {
+		job := &a8n.CampaignJob{
+			CampaignPlanID: mod.ID,
+			StartedAt: time.Now().UTC(),
+		}
+
+		err := relay.UnmarshalSpec(repo.ID(), &job.RepoID)
+		if err != nil {
+			return nil, err
+		}
+
+		defaultBranch, err := repo.DefaultBranch(ctx)
+		if err != nil {
+			return nil, err
+		}
+		commit, err := defaultBranch.Target().Commit(ctx)
+		if err != nil {
+			return nil, err
+		}
+		job.Rev = api.CommitID(commit.OID())
+
+		err = r.store.CreateCampaignJob(ctx, job)
+		if err != nil {
+			return nil, err
+		}
+
+		wg.Add(1)
+		go func(mod *a8n.CampaignPlan, job *a8n.CampaignJob) {
+			// TODO: Do real work.
+			// Send request to service with Repo, Ref, Arguments.
+			// Receive diff.
+			log15.Info("CampaignJob started", "id", job.ID, "repo_id", job.RepoID)
+
+			job.Diff = bogusDiff
+			job.FinishedAt = time.Now()
+
+			err := r.store.UpdateCampaignJob(ctx, job)
+			if err != nil {
+				log15.Error("RunCampaign.UpdateCampaignJob failed", "err", err)
+			}
+
+			log15.Info("CampaignJob finished", "id", job.ID, "repo_id", job.RepoID)
+
+			wg.Done()
+		}(mod, job)
+	}
+
+	wg.Wait()
+
+	return &campaignPlanResolver{store: r.store, campaignPlan: mod}, nil
+}
+
+const bogusDiff = `diff --git a/README.md b/README.md
+index 323fae0..34a3ec2 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-foobar
++barfoo
+`

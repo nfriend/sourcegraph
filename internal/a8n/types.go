@@ -4,9 +4,74 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sourcegraph/sourcegraph/internal/api"
+	"github.com/sourcegraph/sourcegraph/internal/env"
 	"github.com/sourcegraph/sourcegraph/internal/extsvc/bitbucketserver"
 	"github.com/sourcegraph/sourcegraph/internal/extsvc/github"
 )
+
+type CampaignPlanSpec struct {
+	Parameters  []string
+	ServiceURL  string
+	SearchQuery string
+}
+
+var CampaignPlanSpecs = map[string]CampaignPlanSpec{
+	"COMBY": {
+		Parameters:  []string{"matchTemplate", "rewriteTemplate"},
+		ServiceURL:  env.Get("COMBY_URL", "http://replacer:3185", "replacer server URL"),
+		SearchQuery: "repo:^github.com/sourcegraph/sourcegraph$",
+	},
+}
+
+// A CampaignPlan is created when a campaign is run and causes the CampaignPlanSpec to be
+// applied to the Arguments.
+type CampaignPlan struct {
+	ID         int64
+	CampaignID int64
+
+	CampaignPlanSpec string
+	Arguments   map[string]string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Clone returns a clone of a CampaignPlan.
+func (c *CampaignPlan) Clone() *CampaignPlan {
+	cc := *c
+	cc.Arguments = make(map[string]string, len(c.Arguments))
+	for k, v := range c.Arguments {
+		cc.Arguments[k] = v
+	}
+	return &cc
+}
+
+// A code mod job is the application of a CampaignPlanSpec over CampaignPlan arguments in
+// a specific repository at a specific commit.
+type CampaignJob struct {
+	ID        int64
+	CampaignPlanID int64
+
+	RepoID int32
+	Rev    api.CommitID
+
+	Diff string
+
+	StartedAt  time.Time
+	FinishedAt time.Time
+
+	Error string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Clone returns a clone of a CampaignJob.
+func (c *CampaignJob) Clone() *CampaignJob {
+	cc := *c
+	return &cc
+}
 
 // A Campaign of changesets over multiple Repos over time.
 type Campaign struct {
@@ -19,6 +84,7 @@ type Campaign struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	ChangesetIDs    []int64
+	CampaignPlanID       int64
 }
 
 // Clone returns a clone of a Campaign.

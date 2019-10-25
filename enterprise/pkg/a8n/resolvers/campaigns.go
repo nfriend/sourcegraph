@@ -187,3 +187,16 @@ func (r *campaignResolver) ChangesetCountsOverTime(
 
 	return resolvers, nil
 }
+
+func (r *campaignResolver) CampaignPlan(ctx context.Context) (graphqlbackend.CampaignPlanResolver, error) {
+	if r.Campaign.CampaignPlanID == 0 {
+		return nil, nil
+	}
+
+	mod, err := r.store.GetCampaignPlan(ctx, ee.GetCampaignPlanOpts{ID: r.Campaign.CampaignPlanID})
+	if err != nil {
+		return nil, err
+	}
+
+	return &campaignPlanResolver{store: r.store, campaignPlan: mod}, nil
+}
