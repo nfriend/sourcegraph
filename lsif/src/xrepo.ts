@@ -365,6 +365,28 @@ export class XrepoDatabase {
     }
 
     /**
+     * Get all dumps for a repository and commit where there exists a dump for
+     * the commit that has maximal age, and no dump for the commit is visible at
+     * the tip.
+     */
+    public getOldestPrunableDumps(): Promise<LsifDump[]> {
+        const query = `
+            SELECT d3.* from (
+                SELECT * FROM lsif_dumps d1
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM lsif_dumps
+                    WHERE repository = d1.repository AND commit = d1.commit AND visible_at_tip
+                )
+                ORDER BY uploaded_at LIMIT 1
+            ) AS d2
+            JOIN lsif_dumps d3
+            ON d2.repository = d3.repository AND d2.commit = d3.commit
+        `
+
+        return this.withConnection(connection => connection.query(query))
+    }
+
+    /**
      * Find the visible dumps. This method is used for testing.
      *
      * @param repository The repository.
